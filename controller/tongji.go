@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/mumushuiding/baidu_tongji/conmgr"
+	"github.com/mumushuiding/baidu_tongji/model"
 	"github.com/mumushuiding/util"
 )
 
@@ -57,4 +58,51 @@ func GetBaiduDataByTimeSpan(w http.ResponseWriter, r *http.Request) {
 	}
 	util.ResponseData(w, "成功发起查询，查询中。。")
 
+}
+
+// GetTongjiData 获取统计数据
+func GetTongjiData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		util.ResponseErr(w, "只支持POST方法")
+		return
+	}
+	var body model.EditorTongji
+	err := util.Body2Struct(r, &body)
+	if err != nil {
+		util.ResponseErr(w, err)
+		return
+	}
+	// log.Println("body:", body.ToString())
+	if len(body.Body.StartDate) > 0 {
+		_, err := util.ParseDate3(body.Body.StartDate)
+		if err != nil {
+			util.ResponseErr(w, err)
+			return
+		}
+	}
+	if len(body.Body.EndDate) > 0 {
+		_, err := util.ParseDate3(body.Body.EndDate)
+		if err != nil {
+			util.ResponseErr(w, err)
+			return
+		}
+	}
+	f, err := GetRoute(body.Body.Method)
+	if err != nil {
+		util.ResponseErr(w, err)
+		return
+	}
+	result, err := f(&body)
+	if err != nil {
+		util.ResponseErr(w, err)
+		return
+	}
+	util.ResponseData(w, result)
+
+}
+
+// GetRemoteFzManuscriptNotHave 远程拉取稿件数据
+func GetRemoteFzManuscriptNotHave(w http.ResponseWriter, r *http.Request) {
+	conmgr.Conmgr.GetRemoteFzManuscriptNotHave()
+	util.ResponseData(w, "已经开始从远程拉取数据，失败的纪录会保存在,typename为【recordgetRemoteFzManuscriptNotHave】")
 }

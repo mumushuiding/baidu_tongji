@@ -35,6 +35,14 @@ type Configuration struct {
 	AccessControlAllowOrigin  string
 	AccessControlAllowHeaders string
 	AccessControlAllowMethods string
+
+	// DbNews 数据库
+	DbNewsType     string
+	DbNewsName     string
+	DbNewsHost     string
+	DbNewsPort     string
+	DbNewsUser     string
+	DbNewsPassword string
 }
 
 // Config 数据库配置

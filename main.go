@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mumushuiding/baidu_tongji/conmgr"
+	"github.com/mumushuiding/baidu_tongji/controller"
 	"github.com/mumushuiding/baidu_tongji/router"
 
 	"github.com/mumushuiding/baidu_tongji/config"
@@ -26,6 +27,11 @@ func goMain() error {
 		log.Println("关闭数据库连接")
 		model.GetDB().Close()
 	}()
+	model.StartDBNews()
+	defer func() {
+		log.Println("关闭DBNews数据库连接")
+		model.CloseDBNews()
+	}()
 	// 启动redis连接
 	model.SetRedis()
 	defer func() {
@@ -40,6 +46,8 @@ func goMain() error {
 		conmgr.Conmgr.Stop()
 	}()
 	mux := router.Mux
+	// 启动函数路由
+	controller.SetRouterMap()
 
 	readTimeout, err := strconv.Atoi(conf.ReadTimeout)
 	if err != nil {

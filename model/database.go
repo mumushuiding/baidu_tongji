@@ -37,22 +37,23 @@ func SetupDB() {
 
 	db.LogMode(mode)
 
-	db.SingularTable(true) //全局设置表名不可以为复数形式
-	db.Callback().Create().Replace("gorm:update_time_stamp", updateTimeStampForCreateCallback)
 	idle, err := strconv.Atoi(conf.DbMaxIdleConns)
-	if err != nil {
-		panic(err)
-	}
 	db.DB().SetMaxIdleConns(idle)
 	open, err := strconv.Atoi(conf.DbMaxOpenConns)
 	if err != nil {
 		panic(err)
 	}
 	db.DB().SetMaxOpenConns(open)
+	if err != nil {
+		panic(err)
+	}
 
+	db.SingularTable(true) //全局设置表名不可以为复数形式
+	db.Callback().Create().Replace("gorm:update_time_stamp", updateTimeStampForCreateCallback)
 	db.Set("gorm:table_options", "ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;").
-		AutoMigrate(&BaiduAPI{}).AutoMigrate(&BaiduRecord{}).AutoMigrate(&BaiduURLFlow{}).AutoMigrate(&BaiduURLEditor{})
-	// db.Model(&Test{}).AddIndex("idx_id", "id")
+		AutoMigrate(&BaiduAPI{}).AutoMigrate(&BaiduRecord{}).AutoMigrate(&BaiduURLFlow{}).AutoMigrate(&BaiduURLEditor{}).AutoMigrate(&FzManuscript{})
+	db.Model(&BaiduURLEditor{}).AddUniqueIndex("pageid", "page_id")
+	db.Model(&FzManuscript{}).AddIndex("filename_index", "filename")
 }
 
 // CloseDB closes database connection (unnecessary)

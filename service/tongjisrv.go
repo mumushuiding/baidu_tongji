@@ -55,7 +55,7 @@ func GetDatesToFind(typename string) ([]string, error) {
 	}
 	var dates []string
 	log.Println("最后更新时间:", result.TimeSpan)
-	timespan, _ := util.ParseDate2(result.TimeSpan)
+	timespan, _ := util.ParseDate3(result.TimeSpan)
 	timespan = time.Date(timespan.Year(), timespan.Month(), timespan.Day(), 0, 0, 0, 0, timespan.Location())
 
 	sub := starDate.Day() - timespan.Day()

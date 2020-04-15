@@ -3,13 +3,16 @@ package conmgr
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/mumushuiding/baidu_tongji/model"
 	"github.com/mumushuiding/baidu_tongji/service"
 	"github.com/mumushuiding/util"
@@ -35,8 +38,17 @@ type ConnManager struct {
 	quit  chan struct{}
 	// 消息通道
 	msgchan chan interface{}
+	// 受访页面
+	editorchan     chan interface{}
+	editorSaveLock sync.Mutex
+
 	// 纪录通道
 	recordchan chan model.BaiduRecord
+
+	// 稿件通道
+	fzManuscriptchan         chan interface{}
+	fzManuscriptNotFound     map[string]string
+	fzManuscriptNotFoundLock sync.Mutex
 }
 type chanStruct struct {
 	api model.BaiduAPI
@@ -63,16 +75,20 @@ func (cm *ConnManager) Stop() {
 	close(cm.quit)
 	defer close(cm.msgchan)
 	defer close(cm.recordchan)
-
+	defer close(cm.editorchan)
+	defer close(cm.fzManuscriptchan)
 	log.Println("关闭连接管理器")
 }
 
 // New 新建一个连接管理器
 func New() {
 	cm := ConnManager{
-		quit:       make(chan struct{}),
-		msgchan:    make(chan interface{}, 50),
-		recordchan: make(chan model.BaiduRecord, 20),
+		quit:                 make(chan struct{}),
+		msgchan:              make(chan interface{}, 50),
+		recordchan:           make(chan model.BaiduRecord, 20),
+		editorchan:           make(chan interface{}, 100),
+		fzManuscriptchan:     make(chan interface{}, 100),
+		fzManuscriptNotFound: make(map[string]string),
 	}
 	Conmgr = &cm
 	Conmgr.Start()
@@ -97,15 +113,7 @@ out:
 		select {
 		case req := <-cm.msgchan:
 			switch msg := req.(type) {
-			case *model.FzManuscript:
-				// 存储PageId同编辑的对应关系
-				go func() {
-					editor := msg.Transform2URLEditor()
-					err := editor.SaveOrUpdate()
-					if err != nil {
-						sendRecord(cm, "保存BaiduURLEditor失败", editor.ToString(), 0, err)
-					}
-				}()
+
 			case *model.BaiduData:
 				go func() {
 					ufs := msg.Transform2URLFlow()
@@ -120,44 +128,117 @@ out:
 					}
 					// URL对应PageId对象数组
 					urls := msg.GetBItems()
-					for _, url := range urls {
+					select {
+					case cm.editorchan <- urls:
+					case <-cm.quit:
+						return
+					}
+
+				}()
+			case *model.BaiduURLFlow:
+				go func() {
+					msg.TimeSpan = strings.ReplaceAll(msg.TimeSpan, "/", "-")
+					err := msg.SaveOrUpdate()
+					if err != nil {
+						sendRecord(cm, "保存受访页面流量失败", msg.ToString(), 0, err)
+					}
+				}()
+			}
+		case req1 := <-cm.editorchan:
+			switch msg1 := req1.(type) {
+			case []model.BItems:
+				go func() {
+					for _, url := range msg1 {
 						select {
-						case cm.msgchan <- &url:
+						case cm.editorchan <- url:
+						case <-cm.quit:
+							return
+						}
+					}
+				}()
+			case model.BItems:
+				go func() {
+					// 查询PageId对应的编辑
+					urls := strings.Split(msg1.Name, "?")
+					if len(urls) == 0 {
+						return
+					}
+					paper, err := service.FindFzManuscriptByURLFromLocalDB(urls[0])
+					if err != nil {
+						select {
+						case cm.fzManuscriptchan <- model.FzManuscriptNotFound{Filename: urls[0], PageID: msg1.PageID}:
+						case <-cm.quit:
+							return
+						}
+					} else {
+						editor := paper.Transform2URLEditor()
+						editor.PageID = msg1.PageID
+						select {
+						case cm.editorchan <- &editor:
 						case <-cm.quit:
 							return
 						}
 					}
 
 				}()
-			case *model.BItems:
+			case *model.BaiduURLEditor:
 				go func() {
-					// 查询PageId对应的编辑
-					urls := strings.Split(msg.Name, "?")
-					paper, err := service.FindFzManuscriptByURL(urls[0])
+					// log.Println("editor:", msg1.ToString())
+					// cm.editorSaveLock.Lock()
+					// defer cm.editorSaveLock.Unlock()
+					err := msg1.SaveOrUpdate()
+					if err != nil && !strings.Contains(err.Error(), "Error 1062: Duplicate entry") {
+						sendRecord(cm, "存储BaiduURLEditor失败", msg1.ToString(), 0, err)
+					}
+				}()
+			}
+		case req2 := <-cm.fzManuscriptchan:
+			switch msg2 := req2.(type) {
+			case model.FzManuscriptNotFound:
+				go func() {
+					// cm.fzManuscriptNotFound[msg2.Filename] = msg2.PageID
+
+					result, err := service.FindFzManuscriptByURLFromDBNews(msg2.Filename)
 					if err != nil {
-						sendRecord(cm, "查询FzManuscript稿件失败", msg.Name, 0, err)
+						sendRecord(cm, "远程查询FzManuscript失败", msg2.Filename, 0, err)
 						return
 					}
-					editor := paper.Transform2URLEditor()
-					editor.PageID = msg.PageID
+					result.PageID = msg2.PageID
+					// log.Printf("url: %s,result: %s\n", result.Filename, result.ToString())
 					select {
-					case cm.msgchan <- &editor:
+					case cm.fzManuscriptchan <- result:
 					case <-cm.quit:
 						return
 					}
 				}()
-			case *model.BaiduURLEditor:
+			case []*model.FzManuscript:
 				go func() {
-					err := msg.SaveOrUpdate()
-					if err != nil {
-						sendRecord(cm, "存储BaiduURLEditor失败", msg.ToString(), 0, err)
+					for _, v := range msg2 {
+						select {
+						case cm.fzManuscriptchan <- v:
+						case <-cm.quit:
+							return
+						}
 					}
 				}()
-			case *model.BaiduURLFlow:
+			case *model.FzManuscript:
 				go func() {
-					err := msg.SaveOrUpdate()
-					if err != nil {
-						sendRecord(cm, "保存受访页面流量失败", msg.ToString(), 0, err)
+					err := msg2.SaveOrUpdate()
+					// log.Println("存储:", msg2.ToString())
+					if err != nil && !strings.Contains(err.Error(), "Error 1062: Duplicate entry") {
+						sendRecord(cm, "存储FzManuscript失败", msg2.ToString(), 0, err)
+					}
+					if len(msg2.PageID) > 0 {
+						editor := model.BaiduURLEditor{
+							PageID:   msg2.PageID,
+							Username: msg2.Editor,
+							Realname: msg2.Editorname,
+						}
+						select {
+						case cm.editorchan <- &editor:
+						case <-cm.quit:
+							return
+						}
 					}
 				}()
 			}
@@ -175,9 +256,23 @@ func cronTaskStart(cm *ConnManager) {
 	log.Println("启动定时任务")
 out:
 	for {
+		// now := time.Now()
+		// // next := now.Add(time.Hour * 24)
+		// // next = time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, next.Location())
+		// next := now.Add(time.Second * 10)
+		// t := time.NewTimer(next.Sub(now))
+		// select {
+		// // 连接管理器终止时退出
+		// case <-cm.quit:
+		// 	break out
+		// case <-t.C:
+		// 	// 执行定时任务
+		// 	go cm.flushFzManuscriptNotFound()
+
+		// }
 		now := time.Now()
 		next := now.Add(time.Hour * 24)
-		next = time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, next.Location())
+		next = time.Date(next.Year(), next.Month(), next.Day(), 0, 4, 0, 0, next.Location())
 		// next := now.Add(time.Second * 10)
 		t := time.NewTimer(next.Sub(now))
 		select {
@@ -185,8 +280,13 @@ out:
 		case <-cm.quit:
 			break out
 		case <-t.C:
+			// 先拉取最新稿件
+			go cm.GetRemoteFzManuscriptNotHave()
+			// 然后暂停10秒，保证存储最新稿件
+			time.Sleep(time.Second * 10)
 			// 执行定时任务
 			go GetBaiduData(cm)
+
 		}
 	}
 }
@@ -350,5 +450,56 @@ func writeToFile(filepath string, content string) {
 	w.WriteString(content)
 	w.Flush()
 	f.Close()
+
+}
+
+func (cm *ConnManager) getFzManuscriptNotFoundLength() int {
+	cm.fzManuscriptNotFoundLock.Lock()
+	defer cm.fzManuscriptNotFoundLock.Unlock()
+	return len(cm.fzManuscriptNotFound)
+}
+
+// GetRemoteFzManuscriptNotHave 从远程获取本地没有的稿件
+func (cm *ConnManager) GetRemoteFzManuscriptNotHave() {
+	// 获取最后一次 publictime 的时间，将其设置成 startDate,要覆盖一次防止遗漏
+	// 然后将当前时间设置为endDate
+	res, _, err := service.FindFzManuscriptFromLocal(map[string]interface{}{"order": "publictime desc", "max_results": 1})
+	if err != nil && err != gorm.ErrRecordNotFound {
+		sendRecord(cm, "getRemoteFzManuscriptNotHave", err.Error(), 0, err)
+	}
+
+	now := time.Now()
+
+	end := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+
+	pub := res[0].Publictime
+	start := time.Date(pub.Year(), pub.Month(), pub.Day(), 0, 0, 0, 0, pub.Location())
+
+	fields := make(map[string]interface{})
+
+	where := fmt.Sprintf("publictime>='%s' and publictime<='%s'", util.FormatDate3(start), util.FormatDate3(end))
+
+	fields["where"] = where
+	fields["order"] = "publictime desc"
+	fields["max_results"] = 1
+	// 计算条数
+	_, count, err := service.FindFzManuscriptFromLocal(fields)
+	// 每200条一个线程，并发查询最后将结果发送到fzManuscriptchan通道
+	processnum := int(math.Ceil(float64(count) / float64(200)))
+	fields["max_results"] = 200
+	for i := 0; i < processnum; i++ {
+		go func(index int, fields map[string]interface{}) {
+			fields["start_index"] = index * 200
+			result, _, err := service.FindFzManuscriptFromDBNews(fields)
+			if err != nil && err != gorm.ErrRecordNotFound {
+				str, _ := util.ToJSONStr(fields)
+				sendRecord(cm, "getRemoteFzManuscriptNotHave", str, 0, err)
+			}
+			select {
+			case <-cm.quit:
+			case cm.fzManuscriptchan <- result:
+			}
+		}(i, fields)
+	}
 
 }

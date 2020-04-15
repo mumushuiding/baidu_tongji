@@ -20,5 +20,12 @@
   "TLSKey": "server.key",
   "AccessControlAllowOrigin": "*",
   "AccessControlAllowHeaders": "*",
-  "AccessControlAllowMethods": "POST, GET, PUT, OPTIONS, DELETE, PATCH"
+  "AccessControlAllowMethods": "POST, GET, PUT, OPTIONS, DELETE, PATCH",
+
+  "DbNewsType": "mysql",
+  "DbNewsName": "fznewscms",
+  "DbNewsHost": "129.0.99.111",
+  "DbNewsPort": "3306",
+  "DbNewsUser": "fznewscms",
+  "DbNewsPassword": "fz!&cms&&fznews"
 }

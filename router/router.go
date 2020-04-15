@@ -4,9 +4,15 @@ import (
 	"net/http"
 
 	"github.com/mumushuiding/baidu_tongji/config"
-
 	"github.com/mumushuiding/baidu_tongji/controller"
+	"github.com/mumushuiding/baidu_tongji/model"
 )
+
+// RouteFunction 根据路径指向方法
+type RouteFunction func(*model.EditorTongji) (string, error)
+
+// RouterMap 路由
+var RouterMap map[string]RouteFunction
 
 // Mux 路由
 var Mux = http.NewServeMux()
@@ -26,9 +32,13 @@ func crossOrigin(h http.HandlerFunc) http.HandlerFunc {
 func init() {
 	setMux()
 }
+
 func setMux() {
 	Mux.HandleFunc("/api/v1/test/index", interceptor(controller.Index))
-
+	// 获取统计数据接口
+	Mux.HandleFunc("/api/v1/tongji/getData", interceptor(controller.GetTongjiData))
 	// 百度统计接口
 	Mux.HandleFunc("/api/v1/baidutongji/getData", interceptor(controller.GetBaiduDataByTimeSpan))
+	// 远程拉取最新稿件
+	Mux.HandleFunc("/api/v1/tongji/getFzmanuscript", interceptor(controller.GetRemoteFzManuscriptNotHave))
 }
