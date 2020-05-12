@@ -29,6 +29,8 @@ type Body struct {
 	Method     string `json:"method"`
 	StartIndex int    `json:"start_index"`
 	MaxResults int    `json:"max_results"`
+	Source     string `json:"source"`
+	Visitor    string `json:"visitor"`
 }
 
 // Params 参数

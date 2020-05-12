@@ -34,6 +34,7 @@ func init() {
 }
 
 func setMux() {
+	Mux.HandleFunc("/check/memory", controller.MemoryCheck)
 	Mux.HandleFunc("/api/v1/test/index", interceptor(controller.Index))
 	// 获取统计数据接口
 	Mux.HandleFunc("/api/v1/tongji/getData", interceptor(controller.GetTongjiData))

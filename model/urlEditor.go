@@ -15,6 +15,11 @@ func (e *BaiduURLEditor) SaveOrUpdate() error {
 	return db.Where(BaiduURLEditor{PageID: e.PageID}).Assign(e).FirstOrCreate(e).Error
 }
 
+// Save Save
+func (e *BaiduURLEditor) Save() error {
+	return db.Create(e).Error
+}
+
 // ToString ToString
 func (e *BaiduURLEditor) ToString() string {
 	str, _ := util.ToJSONStr(e)

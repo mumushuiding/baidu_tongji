@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"runtime/pprof"
 )
 
 // Index 首页
@@ -41,4 +42,10 @@ func GetBody2Struct(request *http.Request, pojo interface{}) error {
 		return nil
 	}
 	return json.Unmarshal(s, pojo)
+}
+
+// MemoryCheck 内存检测
+func MemoryCheck(w http.ResponseWriter, r *http.Request) {
+	p := pprof.Lookup("goroutine")
+	p.WriteTo(w, 1)
 }

@@ -42,7 +42,7 @@ func GetDatesToFind(typename string) ([]string, error) {
 	// 查询上次查询的日期 yyyymmdd,查不到就返回今天
 	// 如果小于今天就添加上今天
 	var result model.BaiduURLFlow
-	err := result.FindLast(nil)
+	err := result.FindLast()
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	}

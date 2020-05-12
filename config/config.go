@@ -43,6 +43,11 @@ type Configuration struct {
 	DbNewsPort     string
 	DbNewsUser     string
 	DbNewsPassword string
+
+	// 内存监测
+	SaveHeapProfile string
+	// 内存监测间隔，单位秒
+	SaveHeapProfileTimePeriod string
 }
 
 // Config 数据库配置

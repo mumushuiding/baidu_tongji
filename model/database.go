@@ -53,7 +53,13 @@ func SetupDB() {
 	db.Set("gorm:table_options", "ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;").
 		AutoMigrate(&BaiduAPI{}).AutoMigrate(&BaiduRecord{}).AutoMigrate(&BaiduURLFlow{}).AutoMigrate(&BaiduURLEditor{}).AutoMigrate(&FzManuscript{})
 	db.Model(&BaiduURLEditor{}).AddUniqueIndex("pageid", "page_id")
+	db.Model(&BaiduURLEditor{}).AddUniqueIndex("pageid_username", "page_id", "username")
+	db.Model(&BaiduURLEditor{}).AddIndex("username", "username")
+	db.Model(&BaiduURLFlow{}).AddUniqueIndex("pageid_timespan_source_visitor", "page_id", "time_span", "source", "visitor")
+	db.Model(&BaiduURLFlow{}).AddIndex("name", "name")
+	db.Model(&BaiduURLFlow{}).AddIndex("timespan", "time_span")
 	db.Model(&FzManuscript{}).AddIndex("filename_index", "filename")
+	db.Model(&FzManuscript{}).AddIndex("editor_index", "editor")
 }
 
 // CloseDB closes database connection (unnecessary)

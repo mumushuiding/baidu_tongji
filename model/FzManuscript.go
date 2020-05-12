@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/mumushuiding/util"
@@ -30,6 +31,13 @@ type FzManuscript struct {
 	PageID string `json:"pageId"`
 }
 
+// FzManuscriptCount 稿件数
+type FzManuscriptCount struct {
+	Editor     string `json:"editor"`
+	Editorname string `json:"editorname"`
+	Number     int    `json:"number"`
+}
+
 // FBody FBody
 // type FBody struct {
 // 	Data []interface{} `json:data,omitempty`
@@ -41,7 +49,55 @@ type FzManuscriptNotFound struct {
 	PageID   string
 }
 
-// FindFzManuscriptFromLocal 远程查询
+// CountEditorFzManuscriptFromLocal 从本地查询编辑对应的稿件数
+func CountEditorFzManuscriptFromLocal(fields map[string]interface{}) ([]*FzManuscriptCount, error) {
+	var where strings.Builder
+	if fields["start_date"] != nil {
+		where.WriteString(" and fz_manuscript.inserttime>='" + fields["start_date"].(string) + "'")
+	}
+	if fields["end_date"] != nil {
+		where.WriteString(" and fz_manuscript.inserttime<='" + fields["end_date"].(string) + "'")
+	}
+	if fields["editor"] != nil {
+		where.WriteString(" and fz_manuscript.editor='" + fields["editor"].(string) + "'")
+	}
+	where.WriteString(" and state!=-1")
+	var w string
+	if len(where.String()) > 0 {
+		w = where.String()[4:]
+	}
+	var result []*FzManuscriptCount
+	err := db.Select("editor,editorname,count(id) as number").Table("fz_manuscript").
+		Where(w).
+		Group("editor,editorname").
+		Order("number desc").
+		Find(&result).
+		Error
+	return result, err
+}
+
+// CountFzManuscriptFromLocal 条数
+func CountFzManuscriptFromLocal(fields map[string]interface{}) (int, error) {
+	var count int
+	var where strings.Builder
+	if fields["start_date"] != nil {
+		where.WriteString("and inserttime>='" + fields["start_date"].(string) + "'")
+	}
+	if fields["end_date"] != nil {
+		where.WriteString("and inserttime<='" + fields["end_date"].(string) + "'")
+	}
+	if fields["editor"] != nil {
+		where.WriteString("and editor='" + fields["editor"].(string) + "'")
+	}
+	var w string
+	if len(where.String()) > 0 {
+		w = where.String()[4:]
+	}
+	err := db.Table("fz_manuscript").Where(w).Count(&count).Error
+	return count, err
+}
+
+// FindFzManuscriptFromLocal 本地查询
 func FindFzManuscriptFromLocal(fields map[string]interface{}) ([]*FzManuscript, int, error) {
 	if len(fields) == 0 {
 		return nil, 0, errors.New("查询参数不能全为空")
@@ -60,7 +116,7 @@ func FindFzManuscriptFromLocal(fields map[string]interface{}) ([]*FzManuscript, 
 	}
 	var r []*FzManuscript
 	var count int
-	err := dbNews.
+	err := db.
 		Table("fz_manuscript").
 		Where(fields["where"]).
 		Count(&count).
@@ -69,6 +125,40 @@ func FindFzManuscriptFromLocal(fields map[string]interface{}) ([]*FzManuscript, 
 		Limit(fields["max_results"]).
 		Find(&r).Error
 	return r, count, err
+}
+
+// select title,editor,name,sum(pv_count) as pv_count from baidu_url_flow b join fz_manuscript f on (f.filename=b.name and time_span>='2020-04-06' and time_span<='2020-05-01')  group by title,editor,name order by pv_count desc limit 10;
+
+// FindFzManuscripFlow 多表查询文章的流量和编辑的头像
+func FindFzManuscripFlow(fields map[string]interface{}) ([]*EURLFlow, error) {
+	if len(fields) == 0 {
+		return nil, errors.New("查询参数不能全为空")
+	}
+	if fields["max_results"] == nil {
+		fields["max_results"] = 50
+	}
+	if fields["order"] == nil {
+		fields["order"] = "pv_count desc,visitor_count desc"
+	}
+	if fields["start_index"] == nil {
+		fields["start_index"] = 0
+	}
+	if fields["start_date"] == nil {
+		fields["start_date"] = util.FormatDate3(time.Now())
+	}
+	if fields["end_date"] == nil {
+		fields["end_date"] = fields["start_date"]
+	}
+	var r []*EURLFlow
+	err := db.Table("baidu_url_flow").
+		Select("baidu_url_flow.*,fz_manuscript.source,fz_manuscript.title,fz_manuscript.editor as username,fz_manuscript.editorname as realname,fz_manuscript.filename").
+		Joins("join fz_manuscript on fz_manuscript.filename=baidu_url_flow.name").
+		Where("baidu_url_flow.time_span>=? and baidu_url_flow.time_span<=?", fields["start_date"], fields["end_date"]).
+		Order(fields["order"]).
+		Offset(fields["start_index"]).
+		Limit(fields["max_results"]).Find(&r).Error
+	return r, err
+
 }
 
 // FindFzManuscriptByURLFromLocalDB 本地查询
@@ -148,11 +238,4 @@ func FindFzManuscriptFromDBNews(fields map[string]interface{}) ([]*FzManuscript,
 		Limit(fields["max_results"]).
 		Find(&r).Error
 	return r, count, err
-}
-
-// CountFzManuscriptFromDBNews 条数
-func CountFzManuscriptFromDBNews(fields map[string]interface{}) (int, error) {
-	var count int
-	err := dbNews.Where(fields).Count(&count).Error
-	return count, err
 }

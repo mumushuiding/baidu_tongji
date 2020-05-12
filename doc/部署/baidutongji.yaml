@@ -1,0 +1,102 @@
+###################################################
+# 百度统计工具
+##################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: baidu-tongji
+spec:
+  selector:
+    app: baidu-tongji
+  ports:
+  - port: 8080
+    name: http
+---
+# deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: baidu-tongji
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: baidu-tongji
+  template:
+    metadata:
+      labels:
+        app: baidu-tongji
+    spec:
+      containers:
+      - name: baidu-tongji
+        imagePullPolicy: Always
+        image: registry.cn-hangzhou.aliyuncs.com/mumushuiding/baidu_tongji
+        resources:
+          limits:
+            memory: "200Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        env:
+          - name: DbType
+            value: "mysql"
+          - name: DbLogMode
+            value: "false"
+          - name: DbName
+            value: fznews_baidutongji
+          - name: DbHost
+            # value: mysql-external-oms
+            value: 129.0.99.64
+          - name: DbPort
+            value: "3306"
+          - name: DbUser
+            value: root
+          - name: DbPassword
+            value: JXCot%nntYR%CMh0
+          - name: RedisCluster
+            value: "true"
+          - name: RedisHost
+            value: redis-service
+          - name: RedisPort
+            value: "6379"
+          - name: RedisPassword
+            value: ""
+          - name: AccessControlAllowOrigin
+            value: "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: baidu-tongji
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: http
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: baidu-tongji
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - baidu-tongji
+  http:
+  - match:
+    - uri:
+        prefix: /api/v1/tongji
+    - uri: 
+        prefix: /api/v1/baidutongji
+    route:
+    - destination:
+        host: baidu-tongji
+        port:
+          number: 8080
+

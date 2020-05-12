@@ -6,18 +6,25 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"runtime/debug"
+	"runtime/pprof"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mumushuiding/baidu_tongji/conmgr"
 	"github.com/mumushuiding/baidu_tongji/controller"
 	"github.com/mumushuiding/baidu_tongji/router"
 
+	_ "net/http/pprof"
+
 	"github.com/mumushuiding/baidu_tongji/config"
 	"github.com/mumushuiding/baidu_tongji/model"
 )
 
+var (
+	pid      int
+	progname string
+)
 var conf = *config.Config
 
 func goMain() error {
@@ -57,6 +64,22 @@ func goMain() error {
 	if err != nil {
 		return err
 	}
+	// 监测内存
+
+	isMemPprof, _ := strconv.ParseBool(conf.SaveHeapProfile)
+	if isMemPprof {
+		// go func() {
+		// 	s, _ := strconv.Atoi(conf.SaveHeapProfileTimePeriod)
+		// 	log.Printf("每%d秒生成一个内存使用情况图\n", s)
+		// 	time.Sleep(time.Duration(s) * time.Second)
+		// 	saveHeapProfile()
+		// }()
+		log.Printf("pprof监听6060端口,打开网址：http://localhost:6060/debug/pprof/  查看内存CPU使用情况\n")
+		go func() {
+			http.ListenAndServe("localhost:6060", nil)
+		}()
+	}
+
 	// 创建server服务
 	server := &http.Server{
 		Addr:           fmt.Sprintf(":%s", conf.Port),
@@ -82,8 +105,26 @@ func goMain() error {
 }
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	debug.SetGCPercent(10)
+	// debug.SetGCPercent(10)
 	if err := goMain(); err != nil {
 		os.Exit(1)
 	}
+}
+func init() {
+	pid = os.Getpid()
+	paths := strings.Split(os.Args[0], "/")
+	paths = strings.Split(paths[len(paths)-1], string(os.PathSeparator))
+	progname = paths[len(paths)-1]
+	runtime.MemProfileRate = 1
+}
+func saveHeapProfile() {
+	runtime.GC()
+	// f, err := os.Create(fmt.Sprintf("./heap_%s_%d_%s.prof", progname, pid, time.Now().Format("2006_01_02_03_04_05")))
+	f, err := os.Create("./heap.prof")
+
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	pprof.Lookup("heap").WriteTo(f, 1)
 }

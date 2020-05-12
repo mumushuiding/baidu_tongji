@@ -48,7 +48,9 @@ type BData struct {
 
 // BBody BBody
 type BBody struct {
-	Data []BData `json:"data"`
+	Data    []BData `json:"data"`
+	Source  string  `json:"source"`
+	Visitor string  `json:"visitor"`
 }
 
 // IfVisitSucess 判断是否访问成功
@@ -99,17 +101,30 @@ func (b *BaiduData) Transform2URLFlow() []*BaiduURLFlow {
 	var result []*BaiduURLFlow
 	for i, item := range urls {
 		// 流量
+		if len(flows[i]) == 0 {
+			continue
+		}
 		var flow = make(map[string]interface{})
 		for j, field := range fields {
 			// 0 为 visit_page_title 不需要
 			if j == 0 {
 				continue
 			}
-			flow[field] = int(flows[i][j-1].(float64))
+			switch flows[i][j-1].(type) {
+			case float64:
+				flow[field] = int(flows[i][j-1].(float64))
+				break
+			}
+
 		}
 		var uf = &BaiduURLFlow{}
+		uf.Source = b.Body.Source
+		uf.Visitor = b.Body.Visitor
 		uf.TimeSpan = b.Body.Data[0].Result.TimeSpan[0]
 		uf.CreateTime = time.Now()
+		// if len(flow) == 0 {
+		// 	continue
+		// }
 		uf.FromMap(flow)
 		url := item[0].(map[string]interface{})
 		uf.PageID = url["pageId"].(string)

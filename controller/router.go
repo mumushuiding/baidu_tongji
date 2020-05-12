@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 
+	"github.com/mumushuiding/baidu_tongji/conmgr"
 	"github.com/mumushuiding/baidu_tongji/model"
 	"github.com/mumushuiding/baidu_tongji/service"
 )
@@ -17,6 +18,12 @@ var RouterMap map[string]RouteFunction
 func SetRouterMap() {
 	RouterMap = make(map[string]RouteFunction)
 	RouterMap["visit/editor/flow"] = service.FindAllEditorFlowPaged
+	RouterMap["visit/editor/flowWithAvators"] = service.FindAllEditorFlowPagedWithAvators
+	RouterMap["visit/editor/details"] = service.FindEditorDetails
+	RouterMap["visit/editor/articles"] = service.FindEditorArticles
+	RouterMap["visit/editor/trend/visitor"] = service.FindEditorTrendVisitor
+	RouterMap["visit/article/flowWithAvators"] = conmgr.GetArticleFlowWithAvators
+	RouterMap["visit/editor/flowAndManuscriptNumLastMonth"] = conmgr.GetFlowAndManuscriptNumLastMonth
 }
 
 // GetRoute 获取执行函数

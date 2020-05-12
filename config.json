@@ -21,7 +21,7 @@
   "AccessControlAllowOrigin": "*",
   "AccessControlAllowHeaders": "*",
   "AccessControlAllowMethods": "POST, GET, PUT, OPTIONS, DELETE, PATCH",
-
+  "SaveHeapProfile":"true",
   "DbNewsType": "mysql",
   "DbNewsName": "fznewscms",
   "DbNewsHost": "129.0.99.111",
