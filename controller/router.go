@@ -9,7 +9,7 @@ import (
 )
 
 // RouteFunction 根据路径指向方法
-type RouteFunction func(*model.EditorTongji) (string, error)
+type RouteFunction func(*model.EditorTongji) error
 
 // RouterMap 路由
 var RouterMap map[string]RouteFunction
@@ -24,10 +24,12 @@ func SetRouterMap() {
 	RouterMap["visit/editor/trend/visitor"] = service.FindEditorTrendVisitor
 	RouterMap["visit/article/flowWithAvators"] = conmgr.GetArticleFlowWithAvators
 	RouterMap["visit/editor/flowAndManuscriptNumLastMonth"] = conmgr.GetFlowAndManuscriptNumLastMonth
+
+	RouterMap["export/editor/flowAndManuscriptNumLastMonth"] = conmgr.ExportEditorFlowAndManuscriptNumLastMonth
 }
 
 // GetRoute 获取执行函数
-func GetRoute(route string) (func(*model.EditorTongji) (string, error), error) {
+func GetRoute(route string) (func(*model.EditorTongji) error, error) {
 	f := RouterMap[route]
 	if f == nil {
 		return nil, errors.New("method:" + route + ",不存在")

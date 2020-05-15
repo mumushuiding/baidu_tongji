@@ -185,7 +185,7 @@ func FindFzManuscriptFromDBNewsByFilenames(filenames []string) ([]*FzManuscript,
 // SaveOrUpdate 存在就覆盖
 func (p *FzManuscript) SaveOrUpdate() error {
 
-	return db.Where(FzManuscript{Filename: p.Filename}).Assign(&p).FirstOrCreate(p).Error
+	return db.Where(FzManuscript{Filename: p.Filename}).Assign(&p).Omit("page_id").FirstOrCreate(p).Error
 }
 
 // ToString ToString

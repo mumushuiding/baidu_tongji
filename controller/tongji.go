@@ -1,6 +1,9 @@
 package controller
 
 import (
+	"bytes"
+	"encoding/csv"
+	"fmt"
 	"net/http"
 
 	"github.com/mumushuiding/baidu_tongji/conmgr"
@@ -95,12 +98,12 @@ func GetTongjiData(w http.ResponseWriter, r *http.Request) {
 		util.ResponseErr(w, err)
 		return
 	}
-	result, err := f(&body)
+	err = f(&body)
 	if err != nil {
 		util.ResponseErr(w, err)
 		return
 	}
-	util.ResponseData(w, result)
+	util.ResponseData(w, body.ToString())
 
 }
 
@@ -108,4 +111,47 @@ func GetTongjiData(w http.ResponseWriter, r *http.Request) {
 func GetRemoteFzManuscriptNotHave(w http.ResponseWriter, r *http.Request) {
 	conmgr.Conmgr.GetRemoteFzManuscriptNotHave()
 	util.ResponseData(w, "已经开始从远程拉取数据，失败的纪录会保存在,typename为【recordgetRemoteFzManuscriptNotHave】")
+}
+
+// ExportData 导出数据
+func ExportData(writer http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		util.ResponseErr(writer, "只支持POST方法")
+		return
+	}
+	var body model.EditorTongji
+	err := util.Body2Struct(r, &body)
+	if err != nil {
+		util.ResponseErr(writer, err)
+		return
+	}
+	f, err := GetRoute(body.Body.Method)
+	if err != nil {
+		util.ResponseErr(writer, err)
+		return
+	}
+	err = f(&body)
+	if err != nil {
+		util.ResponseErr(writer, err)
+		return
+	}
+	datas := body.Body.Data
+	categoryHeader := body.Body.Fields
+
+	//导出
+	fileName := "export.csv"
+	b := &bytes.Buffer{}
+	wr := csv.NewWriter(b)
+
+	wr.Write(categoryHeader) //按行shu
+	for i := 0; i < len(datas); i++ {
+		wr.Write(datas[i].([]string))
+	}
+	wr.Flush()
+	writer.Header().Set("Content-Type", "text/csv;charset=utf-8")
+
+	writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%s", fileName))
+
+	writer.Write(b.Bytes())
+	// writer.Write(file.Bytes)
 }

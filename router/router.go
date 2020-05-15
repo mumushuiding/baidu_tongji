@@ -38,6 +38,8 @@ func setMux() {
 	Mux.HandleFunc("/api/v1/test/index", interceptor(controller.Index))
 	// 获取统计数据接口
 	Mux.HandleFunc("/api/v1/tongji/getData", interceptor(controller.GetTongjiData))
+	Mux.HandleFunc("/api/v1/tongji/exportData", interceptor(controller.ExportData))
+
 	// 百度统计接口
 	Mux.HandleFunc("/api/v1/baidutongji/getData", interceptor(controller.GetBaiduDataByTimeSpan))
 	// 远程拉取最新稿件

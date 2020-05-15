@@ -27,6 +27,7 @@ type EBody struct {
 	UserName   string        `json:"username,omitempty"`
 	Method     string        `json:"method,omitempty"`
 	Metrics    string        `json:"metrics,omitempty"`
+	Fields     []string      `json:"fields,omitempty"`
 }
 
 // EURLFlow 编辑对应的流量
@@ -90,13 +91,13 @@ func (u *EURLFlow) GetInfluence(startDate, endDate string) (float64, error) {
 // FindAllEditorFlowPaged 分页查询所有的编辑流量
 // select e.username,e.realname,sum(f.pv_count) pv_count from baidu_url_editor e join baidu_url_flow f on e.page_id=f.page_id and time_span>='2020-04-05' and time_span<='2020-04-07
 // ' group by e.username,e.realname order by pv_count desc  limit 30;
-func (e *EditorTongji) FindAllEditorFlowPaged() (string, error) {
+func (e *EditorTongji) FindAllEditorFlowPaged() error {
 	euf, err := e.findAllEditorFlow()
 	if err != nil {
-		return "", err
+		return err
 	}
 	e.Body.Data = append(e.Body.Data, euf)
-	return e.ToString(), nil
+	return nil
 }
 
 // FindAllEditorFlowPagedWithAvatar 查询编辑的流量并匹配微信头像
@@ -309,6 +310,7 @@ func (e *EditorTongji) FindFlowAndManuscriptNum() error {
 		mmap[m.Editor+m.Editorname] = m.Number
 	}
 	for _, flow := range result {
+		flow.Star, _ = flow.GetInfluence(e.Body.StartDate, e.Body.EndDate)
 		flow.Manuscript = mmap[flow.Username+flow.Realname]
 	}
 	e.Body.Data = append(e.Body.Data, result)

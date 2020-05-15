@@ -438,26 +438,6 @@ func GetURLFlowByDate(date string, api model.BaiduAPI, conmgr *ConnManager) {
 		}
 		// 防止增加过快，处理来不及
 		time.Sleep(time.Millisecond * time.Duration(numbersPertime*100))
-		// go func(i int, api model.BaiduAPI) {
-		// 	// 查询i~i+99的数据
-
-		// 	api.Params.Body.StartIndex = i * numbersPertime
-
-		// 	// log.Println("查询参数:", api.Params2Str())
-		// 	// 获取百度统计数据
-		// 	baidudata, err := service.GetDatasOfTargetAPI(api.URL, api.Params2Str())
-		// 	// log.Println("百度数据:", baidudata.ToString())
-		// 	// go writeToFile(fmt.Sprintf("test/output%d-%d-%d-%s", i, api.Params.Body.StartIndex, api.Params.Body.MaxResults, api.Params.Body.StartDate), "")
-		// 	if err != nil {
-		// 		sendRecord(conmgr, api.Type, api.ToString(), 0, err)
-		// 	}
-
-		// 	select {
-		// 	case conmgr.msgchan <- baidudata:
-		// 	case <-conmgr.quit:
-		// 		return
-		// 	}
-		// }(processIndex, api)
 	}
 
 }
@@ -576,24 +556,24 @@ func SetVal2Cache(cachename string, val interface{}) {
 }
 
 // GetArticleFlowWithAvators 查询文章流量和编辑的头像
-func GetArticleFlowWithAvators(e *model.EditorTongji) (string, error) {
+func GetArticleFlowWithAvators(e *model.EditorTongji) error {
 	var result = GetValFromCache(e.Body.Metrics)
 	if result == nil {
 		var err error
 		result, err = FindArticleByTimeSpan(e.Body.Metrics)
 		if err != nil {
-			return "", err
+			return err
 		}
 		// 保存到缓存
 		SetVal2Cache(e.Body.Metrics, result)
 	}
 	e.Body.Data = append(e.Body.Data, result)
-	return e.ToString(), nil
+	return nil
 }
 
 // GetFlowAndManuscriptNumLastMonth 获取上月编辑的流量和稿件量
 // 结果会缓存在conmgr.cacheMap中,key为：上月编辑流量和稿件量
-func GetFlowAndManuscriptNumLastMonth(e *model.EditorTongji) (string, error) {
+func GetFlowAndManuscriptNumLastMonth(e *model.EditorTongji) error {
 	var result = GetValFromCache(EditorFlowAndManuscriptNumLastMonth)
 	if result == nil {
 		log.Println("从mysql查询编辑上月流量")
@@ -603,7 +583,7 @@ func GetFlowAndManuscriptNumLastMonth(e *model.EditorTongji) (string, error) {
 		e.Body.EndDate = util.FormatDate4(end)
 		err = e.FindFlowAndManuscriptNum()
 		if err != nil {
-			return "", err
+			return err
 		}
 		// 保存到缓存
 		SetVal2Cache(EditorFlowAndManuscriptNumLastMonth, e.Body.Data[0])
@@ -612,7 +592,7 @@ func GetFlowAndManuscriptNumLastMonth(e *model.EditorTongji) (string, error) {
 		e.Body.Data = append(e.Body.Data, result)
 	}
 
-	return e.ToString(), nil
+	return nil
 }
 
 // FindArticleByTimeSpan 根据时间段查询
