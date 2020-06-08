@@ -49,16 +49,17 @@ func GetDatesToFind(typename string) ([]string, error) {
 	today := time.Now()
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 
-	starDate := today.Add(time.Hour * (-24))
+	endDate := today.Add(time.Hour * (-24))
 	if err == gorm.ErrRecordNotFound {
-		return []string{util.FormatDate1(starDate)}, nil
+		return []string{util.FormatDate1(endDate)}, nil
 	}
 	var dates []string
 	log.Println("最后更新时间:", result.TimeSpan)
 	timespan, _ := util.ParseDate3(result.TimeSpan)
 	timespan = time.Date(timespan.Year(), timespan.Month(), timespan.Day(), 0, 0, 0, 0, timespan.Location())
 
-	sub := starDate.Day() - timespan.Day()
+	// sub := starDate.Day() - timespan.Day()
+	sub, _ := util.DateSubReturnDays(timespan, endDate)
 	if sub > 0 {
 		for i := 1; i <= sub; i++ {
 			dates = append(dates, util.FormatDate1(time.Date(timespan.Year(), timespan.Month(), timespan.Day()+i, 0, 0, 0, 0, timespan.Location())))

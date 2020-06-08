@@ -18,6 +18,7 @@ func interruptListener(s *http.Server) <-chan struct{} {
 	c := make(chan struct{})
 	go func() {
 		interruptChannel := make(chan os.Signal, 1)
+		// signal.Notify(interruptChannel, interruptSignals...)
 		signal.Notify(interruptChannel, interruptSignals...)
 		select {
 		case sig := <-interruptChannel:

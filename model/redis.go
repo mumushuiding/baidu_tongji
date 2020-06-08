@@ -2,7 +2,6 @@ package model
 
 import (
 	"log"
-	"time"
 
 	redis "github.com/go-redis/redis"
 )
@@ -16,8 +15,6 @@ var RedisCli client
 type client interface {
 	Ping() *redis.StatusCmd
 	Close() error
-	// Expire 设置key超时时间
-	Expire(key string, expiration time.Duration) *redis.BoolCmd
 	// HExists 判断是否存在
 	HExists(key, field string) *redis.BoolCmd
 	// HMset 设置值

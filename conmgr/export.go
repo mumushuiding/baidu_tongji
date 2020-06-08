@@ -2,11 +2,9 @@ package conmgr
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/mumushuiding/baidu_tongji/model"
-	"github.com/mumushuiding/util"
 )
 
 // ExportEditorFlowAndManuscriptNumLastMonth 导出上月编辑的流量
@@ -25,7 +23,7 @@ func ExportEditorFlowAndManuscriptNumLastMonth(e *model.EditorTongji) error {
 		ele := s.Index(i)
 		flow := ele.Interface().(*model.EURLFlow)
 		var list []string
-		list = append(list, flow.Name)
+		list = append(list, flow.Username)
 		list = append(list, flow.Realname)
 		list = append(list, fmt.Sprintf("%d", flow.PvCount))
 		list = append(list, fmt.Sprintf("%d", flow.Manuscript))
@@ -33,7 +31,5 @@ func ExportEditorFlowAndManuscriptNumLastMonth(e *model.EditorTongji) error {
 		e.Body.Data = append(e.Body.Data, list)
 	}
 	e.Body.Data = e.Body.Data[1:]
-	str, _ := util.ToJSONStr(e.Body.Data)
-	log.Println("str:", str)
 	return err
 }

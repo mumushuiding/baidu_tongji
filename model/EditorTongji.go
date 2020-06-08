@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mumushuiding/util"
@@ -274,12 +275,6 @@ func (e *EditorTongji) FindFlowAndManuscriptNum() error {
 	if len(e.Body.EndDate) == 0 {
 		e.Body.EndDate = e.Body.StartDate
 	}
-	// flow, err := e.findAllEditorFlow()
-	// if err != nil {
-	// 	return err
-	// }
-	// e.Body.Data = append(e.Body.Data, flow)
-	// return nil
 
 	var joins strings.Builder
 	joins.WriteString("left join baidu_url_flow on baidu_url_flow.page_id=baidu_url_editor.page_id")
@@ -292,27 +287,71 @@ func (e *EditorTongji) FindFlowAndManuscriptNum() error {
 	// if len(e.Body.Metrics) == 0 {
 	// 	e.Body.Metrics = "baidu_url_editor.username,baidu_url_editor.realname,count(fz_manuscript.editor),sum(baidu_url_flow.pv_count) as pv_count,sum(baidu_url_flow.visitor_count) as visitor_count,sum(baidu_url_flow.outward_count) as outward_count,sum(baidu_url_flow.exit_count) as exit_count,sum(baidu_url_flow.average_stay_time) as average_stay_time"
 	// }
-	var result []*EURLFlow
-	err := db.Table("baidu_url_editor").
-		Select(e.Body.Metrics).
-		Joins(joins.String()).
-		// Joins("left join fz_manuscript on baidu_url_editor.username=fz_manuscript.editor and fz_manuscript.inserttime>=? and fz_manuscript.inserttime>=?", e.Body.StartDate, e.Body.EndDate).
-		Group("baidu_url_editor.username,baidu_url_editor.realname").
-		Where("baidu_url_flow.time_span>=? and baidu_url_flow.time_span<=?", e.Body.StartDate, e.Body.EndDate).
-		Order("pv_count desc,visitor_count desc").Find(&result).Error
 
-	manuscript, err := CountEditorFzManuscriptFromLocal(map[string]interface{}{"start_date": e.Body.StartDate, "end_date": e.Body.EndDate})
-	if err != nil {
-		return err
+	// 查询流量
+	var result []*EURLFlow
+	var manuscript []*FzManuscriptCount
+	var editors []*FzAdmin
+	var err1, err2, err3 error
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() {
+		err1 = db.Table("baidu_url_editor").
+			Select(e.Body.Metrics).
+			Joins(joins.String()).
+			// Joins("left join fz_manuscript on baidu_url_editor.username=fz_manuscript.editor and fz_manuscript.inserttime>=? and fz_manuscript.inserttime>=?", e.Body.StartDate, e.Body.EndDate).
+			Group("baidu_url_editor.username,baidu_url_editor.realname").
+			Where("baidu_url_flow.time_span>=? and baidu_url_flow.time_span<=?", e.Body.StartDate, e.Body.EndDate).
+			Order("pv_count desc,visitor_count desc").Find(&result).Error
+		wg.Done()
+	}()
+
+	go func() {
+		// 查询稿件数
+		manuscript, err2 = CountEditorFzManuscriptFromLocal(map[string]interface{}{"start_date": e.Body.StartDate, "end_date": e.Body.EndDate})
+		wg.Done()
+	}()
+
+	go func() {
+		// 从远程查询当前有效的用户
+		editors, err3 = FindEditorFromRemote()
+		wg.Done()
+	}()
+	wg.Wait()
+	if err1 != nil {
+		return err1
 	}
+	if err2 != nil {
+		return err1
+	}
+	if err3 != nil {
+		return err1
+	}
+	editorMap := make(map[string]bool)
+	for _, e := range editors {
+		editorMap[e.Username+e.Realname] = true
+	}
+	// 删除编辑不存在的流量
+	var indexs []int
+	for i, flow := range result {
+		if editorMap[flow.Username+flow.Realname] == false {
+			indexs = append(indexs, i)
+		}
+	}
+	size := len(indexs)
+	for j := size - 1; j >= 0; j-- {
+		result = append(result[:indexs[j]], result[indexs[j]+1:]...)
+	}
+	// 计算稿件量
 	mmap := make(map[string]int)
 	for _, m := range manuscript {
 		mmap[m.Editor+m.Editorname] = m.Number
 	}
+
 	for _, flow := range result {
 		flow.Star, _ = flow.GetInfluence(e.Body.StartDate, e.Body.EndDate)
 		flow.Manuscript = mmap[flow.Username+flow.Realname]
 	}
 	e.Body.Data = append(e.Body.Data, result)
-	return err
+	return nil
 }

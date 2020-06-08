@@ -139,7 +139,7 @@ func ExportData(writer http.ResponseWriter, r *http.Request) {
 	categoryHeader := body.Body.Fields
 
 	//导出
-	fileName := "export.csv"
+	fileName := "export.xls"
 	b := &bytes.Buffer{}
 	wr := csv.NewWriter(b)
 
@@ -148,7 +148,9 @@ func ExportData(writer http.ResponseWriter, r *http.Request) {
 		wr.Write(datas[i].([]string))
 	}
 	wr.Flush()
-	writer.Header().Set("Content-Type", "text/csv;charset=utf-8")
+	// writer.Header().Set("Content-Type", " application/octet-stream;charset=utf-8")
+
+	writer.Header().Set("Content-Type", "application/vnd.ms-excel;charset=utf-8")
 
 	writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%s", fileName))
 

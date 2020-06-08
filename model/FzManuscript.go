@@ -49,6 +49,12 @@ type FzManuscriptNotFound struct {
 	PageID   string
 }
 
+// SaveOrUpdate 存在就覆盖
+func (p *FzManuscript) SaveOrUpdate() error {
+
+	return db.Where(FzManuscript{Filename: p.Filename}).Assign(&p).Omit("page_id").FirstOrCreate(p).Error
+}
+
 // CountEditorFzManuscriptFromLocal 从本地查询编辑对应的稿件数
 func CountEditorFzManuscriptFromLocal(fields map[string]interface{}) ([]*FzManuscriptCount, error) {
 	var where strings.Builder
@@ -180,12 +186,6 @@ func FindFzManuscriptFromDBNewsByFilenames(filenames []string) ([]*FzManuscript,
 	var r []*FzManuscript
 	err := dbNews.Where("filename in (?)", filenames).Find(&r).Error
 	return r, err
-}
-
-// SaveOrUpdate 存在就覆盖
-func (p *FzManuscript) SaveOrUpdate() error {
-
-	return db.Where(FzManuscript{Filename: p.Filename}).Assign(&p).Omit("page_id").FirstOrCreate(p).Error
 }
 
 // ToString ToString
