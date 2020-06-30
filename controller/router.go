@@ -26,6 +26,8 @@ func SetRouterMap() {
 	RouterMap["visit/editor/flowAndManuscriptNumLastMonth"] = conmgr.GetFlowAndManuscriptNumLastMonth
 
 	RouterMap["export/editor/flowAndManuscriptNumLastMonth"] = conmgr.ExportEditorFlowAndManuscriptNumLastMonth
+	// 处理错误
+	RouterMap["exec/record/handleErr"] = service.HandleErrRecord
 }
 
 // GetRoute 获取执行函数

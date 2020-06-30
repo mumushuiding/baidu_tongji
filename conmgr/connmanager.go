@@ -208,6 +208,14 @@ out:
 					// err := msg1.SaveOrUpdate()
 					err := msg1.Save()
 					if err != nil && !strings.Contains(err.Error(), "Error 1062: Duplicate entry") {
+						if strings.Contains(err.Error(), "driver: bad connection") {
+							select {
+							case cm.editorchan <- msg1:
+							case <-cm.quit:
+								return
+							}
+							return
+						}
 						sendRecord(cm, "存储BaiduURLEditor失败", msg1.ToString(), 0, err)
 					}
 				}()
@@ -220,7 +228,7 @@ out:
 
 					result, err := service.FindFzManuscriptByURLFromDBNews(msg2.Filename)
 					if err != nil {
-						sendRecord(cm, "远程查询FzManuscript失败", msg2.Filename, 0, err)
+						// sendRecord(cm, "远程查询FzManuscript失败", msg2.Filename, 0, err)
 						return
 					}
 					result.PageID = msg2.PageID
@@ -406,7 +414,7 @@ func GetURLFlowByDate(date string, api model.BaiduAPI, conmgr *ConnManager) {
 	// 先查询本次查询的总条数
 	total, err := service.GetTotalNumOfTargetAPI(api.URL, api.Params2Str())
 	if err != nil {
-		sendRecord(conmgr, "service.GetTotalNumOfTargetAPI", "查询总条数", 0, err)
+		sendRecord(conmgr, "service.GetTotalNumOfTargetAPI", api.Params2Str(), 0, err)
 		return
 	}
 	// 确定查询线程数

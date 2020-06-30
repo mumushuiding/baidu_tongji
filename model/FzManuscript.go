@@ -52,7 +52,7 @@ type FzManuscriptNotFound struct {
 // SaveOrUpdate 存在就覆盖
 func (p *FzManuscript) SaveOrUpdate() error {
 
-	return db.Where(FzManuscript{Filename: p.Filename}).Assign(&p).Omit("page_id").FirstOrCreate(p).Error
+	return db.Where(FzManuscript{Filename: p.Filename}).Assign(*p).Omit("page_id").FirstOrCreate(p).Error
 }
 
 // CountEditorFzManuscriptFromLocal 从本地查询编辑对应的稿件数
