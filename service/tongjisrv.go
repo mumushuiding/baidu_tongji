@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -32,7 +33,8 @@ func GetDatasOfTargetAPI(url string, params string) (*model.BaiduData, error) {
 func GetTotalNumOfTargetAPI(url string, params string) (int, error) {
 	baidudata, err := GetDatasOfTargetAPI(url, params)
 	if err != nil {
-		return 0, err
+		s, _ := util.ToJSONStr(baidudata)
+		return 0, fmt.Errorf(`{"data":%s,"err":%s}`, s, err.Error())
 	}
 	return baidudata.GetTotalNums(), nil
 }

@@ -68,6 +68,7 @@ func (b *BaiduData) GetTotalNums() int {
 	if !b.IfVisitSucess() {
 		return 0
 	}
+
 	return b.Body.Data[0].Result.Total
 }
 

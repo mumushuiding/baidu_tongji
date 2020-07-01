@@ -32,7 +32,7 @@ func GetBaiduDataByTimeSpan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body["endDate"] == nil {
-		util.ResponseErr(w, "startDate不能为空，参数如: startDate:20200103")
+		util.ResponseErr(w, "endDate不能为空，参数如: endDate:20200103")
 		return
 	}
 	startDate, ok := body["startDate"].(string)

@@ -59,15 +59,15 @@ func (p *FzManuscript) SaveOrUpdate() error {
 func CountEditorFzManuscriptFromLocal(fields map[string]interface{}) ([]*FzManuscriptCount, error) {
 	var where strings.Builder
 	if fields["start_date"] != nil {
-		where.WriteString(" and fz_manuscript.inserttime>='" + fields["start_date"].(string) + "'")
+		where.WriteString(" and fz_manuscript.publictime>='" + fields["start_date"].(string) + "'")
 	}
 	if fields["end_date"] != nil {
-		where.WriteString(" and fz_manuscript.inserttime<='" + fields["end_date"].(string) + "'")
+		where.WriteString(" and fz_manuscript.publictime<='" + fields["end_date"].(string) + "'")
 	}
 	if fields["editor"] != nil {
 		where.WriteString(" and fz_manuscript.editor='" + fields["editor"].(string) + "'")
 	}
-	where.WriteString(" and state!=-1")
+	where.WriteString(" and state=1")
 	var w string
 	if len(where.String()) > 0 {
 		w = where.String()[4:]

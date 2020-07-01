@@ -283,6 +283,7 @@ out:
 // cronTaskStart 启动定时任务
 func cronTaskStart(cm *ConnManager) {
 	log.Println("启动定时任务")
+	// go cm.GetRemoteFzManuscriptNotHave()
 out:
 	for {
 		now := time.Now()
@@ -501,23 +502,25 @@ func (cm *ConnManager) GetRemoteFzManuscriptNotHave() {
 		pub = res[0].Publictime
 	}
 	// log.Println("pub", pub)
-	start := time.Date(pub.Year(), pub.Month(), pub.Day(), 0, 0, 0, 0, pub.Location())
 
 	fields := make(map[string]interface{})
 
-	where := fmt.Sprintf("publictime>='%s' and publictime<='%s'", util.FormatDate3(start), util.FormatDate3(end))
+	where := fmt.Sprintf("publictime>='%s' and publictime<'%s'", util.FormatDate4(pub), util.FormatDate4(end))
+
+	log.Println("拉取文章:", where)
 
 	fields["where"] = where
-	fields["order"] = "publictime desc"
+	fields["order"] = "publictime asc"
 	fields["max_results"] = 1
 	// 计算条数
-	_, count, err := service.FindFzManuscriptFromLocal(fields)
+	_, count, err := service.FindFzManuscriptFromDBNews(fields)
 	// 每200条一个线程，并发查询最后将结果发送到fzManuscriptchan通道
 	processnum := int(math.Ceil(float64(count) / float64(200)))
 	fields["max_results"] = 200
 	for i := 0; i < processnum; i++ {
-		go func(index int, fields map[string]interface{}) {
+		func(index int, fields map[string]interface{}) {
 			fields["start_index"] = index * 200
+			// log.Println(fields)
 			result, _, err := service.FindFzManuscriptFromDBNews(fields)
 			if err != nil && err != gorm.ErrRecordNotFound {
 				str, _ := util.ToJSONStr(fields)
