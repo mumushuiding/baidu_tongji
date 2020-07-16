@@ -283,7 +283,7 @@ out:
 // cronTaskStart 启动定时任务
 func cronTaskStart(cm *ConnManager) {
 	log.Println("启动定时任务")
-	// go cm.GetRemoteFzManuscriptNotHave()
+	// go RefreshCacheMap()g
 out:
 	for {
 		now := time.Now()
@@ -582,6 +582,21 @@ func GetArticleFlowWithAvators(e *model.EditorTongji) error {
 	return nil
 }
 
+// GetFlowAndManuscriptNum 获取指定时间段的稿件和流量
+func GetFlowAndManuscriptNum(e *model.EditorTongji) error {
+	if len(e.Body.StartDate) == 0 {
+		return errors.New("start_date 不能为空")
+	}
+	if len(e.Body.EndDate) == 0 {
+		return errors.New("end_date 不能为空")
+	}
+	err := e.FindFlowAndManuscriptNum()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetFlowAndManuscriptNumLastMonth 获取上月编辑的流量和稿件量
 // 结果会缓存在conmgr.cacheMap中,key为：上月编辑流量和稿件量
 func GetFlowAndManuscriptNumLastMonth(e *model.EditorTongji) error {
@@ -597,7 +612,9 @@ func GetFlowAndManuscriptNumLastMonth(e *model.EditorTongji) error {
 			return err
 		}
 		// 保存到缓存
-		SetVal2Cache(EditorFlowAndManuscriptNumLastMonth, e.Body.Data[0])
+		if len(e.Body.Data) > 0 {
+			SetVal2Cache(EditorFlowAndManuscriptNumLastMonth, e.Body.Data[0])
+		}
 	} else {
 		log.Println("从缓存获取上月编辑的流量")
 		e.Body.Data = append(e.Body.Data, result)

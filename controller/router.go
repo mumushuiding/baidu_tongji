@@ -24,7 +24,8 @@ func SetRouterMap() {
 	RouterMap["visit/editor/trend/visitor"] = service.FindEditorTrendVisitor
 	RouterMap["visit/article/flowWithAvators"] = conmgr.GetArticleFlowWithAvators
 	RouterMap["visit/editor/flowAndManuscriptNumLastMonth"] = conmgr.GetFlowAndManuscriptNumLastMonth
-
+	// 导出数据
+	RouterMap["export/editor/flowAndManuscriptNum"] = conmgr.ExportEditorFlowAndManuscript
 	RouterMap["export/editor/flowAndManuscriptNumLastMonth"] = conmgr.ExportEditorFlowAndManuscriptNumLastMonth
 	// 处理错误
 	RouterMap["exec/record/handleErr"] = service.HandleErrRecord

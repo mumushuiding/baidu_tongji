@@ -268,6 +268,7 @@ func (e *EditorTongji) FindEditorTrendVisitor() error {
 }
 
 // FindFlowAndManuscriptNum 获取编辑的流量和稿件量
+// select baidu_url_editor.username,baidu_url_editor.realname,sum(baidu_url_flow.pv_count) as pv_count,sum(baidu_url_flow.visitor_count) as visitor_count,sum(baidu_url_flow.outward_count) as outward_count,sum(baidu_url_flow.exit_count) as exit_count,sum(baidu_url_flow.average_stay_time) as average_stay_time FROM baidu_url_editor left join baidu_url_flow on baidu_url_flow.page_id=baidu_url_editor.page_id where baidu_url_flow.time_span>='2020-06-01 00:00:00' and baidu_url_flow.time_span<'2020-07-01' GROUP BY baidu_url_editor.username,baidu_url_editor.realname ORDER BY pv_count desc,visitor_count desc ;
 func (e *EditorTongji) FindFlowAndManuscriptNum() error {
 	if len(e.Body.StartDate) == 0 {
 		return errors.New("start_date不能为空")
@@ -282,7 +283,7 @@ func (e *EditorTongji) FindFlowAndManuscriptNum() error {
 		joins.WriteString(" and baidu_url_editor.username='" + e.Body.UserName + "'")
 	}
 	if len(e.Body.Metrics) == 0 {
-		e.Body.Metrics = "baidu_url_editor.username,baidu_url_editor.realname,sum(baidu_url_flow.pv_count) as pv_count,sum(baidu_url_flow.visitor_count) as visitor_count,sum(baidu_url_flow.outward_count) as outward_count,sum(baidu_url_flow.exit_count) as exit_count,sum(baidu_url_flow.average_stay_time) as average_stay_time"
+		e.Body.Metrics = "baidu_url_editor.realname,sum(baidu_url_flow.pv_count) as pv_count,sum(baidu_url_flow.visitor_count) as visitor_count,sum(baidu_url_flow.outward_count) as outward_count,sum(baidu_url_flow.exit_count) as exit_count,sum(baidu_url_flow.average_stay_time) as average_stay_time"
 	}
 	// if len(e.Body.Metrics) == 0 {
 	// 	e.Body.Metrics = "baidu_url_editor.username,baidu_url_editor.realname,count(fz_manuscript.editor),sum(baidu_url_flow.pv_count) as pv_count,sum(baidu_url_flow.visitor_count) as visitor_count,sum(baidu_url_flow.outward_count) as outward_count,sum(baidu_url_flow.exit_count) as exit_count,sum(baidu_url_flow.average_stay_time) as average_stay_time"
@@ -300,7 +301,7 @@ func (e *EditorTongji) FindFlowAndManuscriptNum() error {
 			Select(e.Body.Metrics).
 			Joins(joins.String()).
 			// Joins("left join fz_manuscript on baidu_url_editor.username=fz_manuscript.editor and fz_manuscript.inserttime>=? and fz_manuscript.inserttime>=?", e.Body.StartDate, e.Body.EndDate).
-			Group("baidu_url_editor.username,baidu_url_editor.realname").
+			Group("baidu_url_editor.realname").
 			Where("baidu_url_flow.time_span>=? and baidu_url_flow.time_span<=?", e.Body.StartDate, e.Body.EndDate).
 			Order("pv_count desc,visitor_count desc").Find(&result).Error
 		wg.Done()
@@ -329,12 +330,14 @@ func (e *EditorTongji) FindFlowAndManuscriptNum() error {
 	}
 	editorMap := make(map[string]bool)
 	for _, e := range editors {
-		editorMap[e.Username+e.Realname] = true
+		// editorMap[e.Username+e.Realname] = true
+		editorMap[e.Realname] = true
 	}
-	// 删除编辑不存在的流量
+	// 删除编辑不存在的流量,fz_admin表里不存在的username+realname的数据都会剔除掉
 	var indexs []int
 	for i, flow := range result {
-		if editorMap[flow.Username+flow.Realname] == false {
+		// if editorMap[flow.Username+flow.Realname] == false {
+		if editorMap[flow.Realname] == false {
 			indexs = append(indexs, i)
 		}
 	}
@@ -345,7 +348,8 @@ func (e *EditorTongji) FindFlowAndManuscriptNum() error {
 	// 计算稿件量
 	mmap := make(map[string]int)
 	for _, m := range manuscript {
-		mmap[m.Editor+m.Editorname] = m.Number
+		// mmap[m.Editor+m.Editorname] = m.Number
+		mmap[m.Editorname] = m.Number
 	}
 
 	for _, flow := range result {

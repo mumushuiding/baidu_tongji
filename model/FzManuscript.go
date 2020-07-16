@@ -73,9 +73,10 @@ func CountEditorFzManuscriptFromLocal(fields map[string]interface{}) ([]*FzManus
 		w = where.String()[4:]
 	}
 	var result []*FzManuscriptCount
-	err := db.Select("editor,editorname,count(id) as number").Table("fz_manuscript").
+	// err := db.Select("editor,editorname,count(id) as number").Table("fz_manuscript").
+	err := db.Select("editorname,count(id) as number").Table("fz_manuscript").
 		Where(w).
-		Group("editor,editorname").
+		Group("editorname").
 		Order("number desc").
 		Find(&result).
 		Error

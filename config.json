@@ -26,6 +26,6 @@
   "DbNewsName": "fznewscms",
   "DbNewsHost": "129.0.99.111",
   "DbNewsPort": "3306",
-  "DbNewsUser": "fznewscms",
-  "DbNewsPassword": "fz!&cms&&fznews"
+  "DbNewsUser": "admin",
+  "DbNewsPassword": "5a33346c32e76"
 }
