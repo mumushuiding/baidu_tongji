@@ -159,6 +159,14 @@ out:
 
 					err := msg.Save()
 					if err != nil && !strings.Contains(err.Error(), "Error 1062: Duplicate entry") {
+						if strings.Contains(err.Error(), "driver: bad connection") {
+							select {
+							case cm.msgchan <- msg:
+							case <-cm.quit:
+								return
+							}
+							return
+						}
 						sendRecord(cm, "保存受访页面流量失败", msg.ToString(), 0, err)
 					}
 				}()
@@ -253,7 +261,16 @@ out:
 				go func() {
 					err := msg2.SaveOrUpdate()
 					// log.Println("存储:", msg2.ToString())
+
 					if err != nil && !strings.Contains(err.Error(), "Error 1062: Duplicate entry") {
+						if strings.Contains(err.Error(), "driver: bad connection") {
+							select {
+							case cm.fzManuscriptchan <- msg2:
+							case <-cm.quit:
+								return
+							}
+							return
+						}
 						sendRecord(cm, "存储FzManuscript失败", msg2.ToString(), 0, err)
 						return
 					}

@@ -39,6 +39,8 @@ func SetupDB() {
 
 	idle, err := strconv.Atoi(conf.DbMaxIdleConns)
 	db.DB().SetMaxIdleConns(idle)
+	// 防止连接时间超过数据库上限，导致连接失效
+	db.DB().SetConnMaxLifetime(time.Minute * 10)
 	open, err := strconv.Atoi(conf.DbMaxOpenConns)
 	if err != nil {
 		panic(err)
